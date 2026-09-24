@@ -24,8 +24,8 @@
  * 1. ESP8266WiFi & ESP8266HTTPClient (Built into ESP8266 Board Package)
  * 2. DHT sensor library by Adafruit
  * 3. Adafruit Unified Sensor by Adafruit
- * 4. LiquidCrystal_I2C by Frank de Brabander (or Marco Schwartz)
- * 5. ArduinoJson by Benoit Blanchon (Version 6 or 7)
+ * 4. LiquidCrystal_I2C (Supports both Marco Schwartz & Frank de Brabander)
+ * 5. ArduinoJson (Supports both v6 and v7)
  * =====================================================================================
  */
 
@@ -67,6 +67,20 @@ const unsigned long interval = 10000; // 10 seconds sync cycle
 String currentLcdRow1 = "";
 String currentLcdRow2 = "";
 
+// -------------------------------------------------------------------------------------
+// SFINAE COMPATIBILITY HELPERS
+// Automatically detects if installed LiquidCrystal_I2C library uses .init() or .begin()
+// -------------------------------------------------------------------------------------
+template <typename T>
+auto initializeLcd(T& display, int) -> decltype(display.init(), void()) {
+  display.init();
+}
+
+template <typename T>
+void initializeLcd(T& display, long) {
+  display.begin();
+}
+
 // Forward declarations
 void connectToWiFi();
 void syncWithServer();
@@ -95,8 +109,8 @@ void setup() {
   // Initialize I2C Pins for ESP8266 (SDA = D2, SCL = D1)
   Wire.begin(D2, D1);
 
-  // Initialize LCD
-  lcd.init();
+  // Initialize LCD (Universal compatibility with any LiquidCrystal_I2C library)
+  initializeLcd(lcd, 0);
   lcd.backlight();
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -213,8 +227,12 @@ void syncWithServer() {
     http.addHeader("Content-Type", "application/json");
     http.addHeader("User-Agent", "ESP8266-HomeAutomation");
 
-    // Build JSON payload
+    // Build JSON payload (Compatible with both ArduinoJson v6 and v7)
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+    JsonDocument reqDoc;
+#else
     StaticJsonDocument<256> reqDoc;
+#endif
     reqDoc["temperature"] = temperature;
     reqDoc["humidity"]    = humidity;
 
@@ -231,8 +249,12 @@ void syncWithServer() {
         Serial.print(F("Server Response: "));
         Serial.println(response);
 
-        // Parse JSON response
+        // Parse JSON response (Compatible with both ArduinoJson v6 and v7)
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+        JsonDocument resDoc;
+#else
         StaticJsonDocument<512> resDoc;
+#endif
         DeserializationError error = deserializeJson(resDoc, response);
 
         if (!error) {
