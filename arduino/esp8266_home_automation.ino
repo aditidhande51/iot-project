@@ -19,13 +19,6 @@
  * 
  * LIVE RENDER SERVER URL:
  * - https://iot-project-x0hz.onrender.com
- * 
- * REQUIRED ARDUINO LIBRARIES (Install via Arduino IDE Library Manager):
- * 1. ESP8266WiFi & ESP8266HTTPClient (Built into ESP8266 Board Package)
- * 2. DHT sensor library by Adafruit
- * 3. Adafruit Unified Sensor by Adafruit
- * 4. LiquidCrystal_I2C (Supports both Marco Schwartz & Frank de Brabander)
- * 5. ArduinoJson (Supports both v6 and v7)
  * =====================================================================================
  */
 
@@ -67,20 +60,6 @@ const unsigned long interval = 10000; // 10 seconds sync cycle
 String currentLcdRow1 = "";
 String currentLcdRow2 = "";
 
-// -------------------------------------------------------------------------------------
-// SFINAE COMPATIBILITY HELPERS
-// Automatically detects if installed LiquidCrystal_I2C library uses .init() or .begin()
-// -------------------------------------------------------------------------------------
-template <typename T>
-auto initializeLcd(T& display, int) -> decltype(display.init(), void()) {
-  display.init();
-}
-
-template <typename T>
-void initializeLcd(T& display, long) {
-  display.begin();
-}
-
 // Forward declarations
 void connectToWiFi();
 void syncWithServer();
@@ -109,8 +88,8 @@ void setup() {
   // Initialize I2C Pins for ESP8266 (SDA = D2, SCL = D1)
   Wire.begin(D2, D1);
 
-  // Initialize LCD (Universal compatibility with any LiquidCrystal_I2C library)
-  initializeLcd(lcd, 0);
+  // Initialize 16x2 I2C LCD
+  lcd.begin(16, 2);
   lcd.backlight();
   lcd.clear();
   lcd.setCursor(0, 0);
